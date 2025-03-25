@@ -52,7 +52,7 @@ public class UpdateTransactionBatchConfiguration {
     @Bean(name = STEP_NAME)
     public Step createAllTransactionEventStep() {
         return new StepBuilder(STEP_NAME, jobRepository)
-                .<UpdateTransactioRecord, String>chunk(CHUNK_SIZE, platformTransactionManager)
+                .<UpdateTransactionRecord, String>chunk(CHUNK_SIZE, platformTransactionManager)
                 .reader(apartmentTransactionQuerydslNoOffsetIdPagingItemReader())
                 .processor(createTransactionEventItemProcessor())
                 .writer(createTransactionEventItemWriter())
@@ -63,13 +63,13 @@ public class UpdateTransactionBatchConfiguration {
 
     @Bean(name = STEP_NAME + "_QuerydslReader")
     @StepScope
-    public QuerydslNoOffsetIdPagingItemReader<UpdateTransactioRecord, Long> apartmentTransactionQuerydslNoOffsetIdPagingItemReader() {
+    public QuerydslNoOffsetIdPagingItemReader<UpdateTransactionRecord, Long> apartmentTransactionQuerydslNoOffsetIdPagingItemReader() {
 
-        QuerydslNoOffsetNumberOptions<UpdateTransactioRecord, Long> options = new QuerydslNoOffsetNumberOptions<>(apartmentTransaction.id, Expression.ASC);
+        QuerydslNoOffsetNumberOptions<UpdateTransactionRecord, Long> options = new QuerydslNoOffsetNumberOptions<>(apartmentTransaction.id, Expression.ASC);
 
         return new QuerydslNoOffsetIdPagingItemReader<>(emf, CHUNK_SIZE, options, query -> query
                 .select(Projections.constructor(
-                        UpdateTransactioRecord.class,
+                        UpdateTransactionRecord.class,
                         apartmentTransaction.id,
                         predictCost.predictedCost,
                         predictCost.isReliable
@@ -82,7 +82,7 @@ public class UpdateTransactionBatchConfiguration {
 
     @Bean(name = STEP_NAME + "_Processor")
     @StepScope
-    public ItemProcessor<UpdateTransactioRecord, String> createTransactionEventItemProcessor() {
+    public ItemProcessor<UpdateTransactionRecord, String> createTransactionEventItemProcessor() {
         return objectMapper::writeValueAsString;
     }
 
