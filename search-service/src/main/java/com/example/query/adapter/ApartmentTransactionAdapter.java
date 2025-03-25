@@ -21,4 +21,5 @@ public interface ApartmentTransactionAdapter {
     List<SearchApartNameResponse> findApartmentNames(String gu, String dongName);
     List<SearchAreaResponse> findAreaForExclusive(String gu, String dongName, String apartmentName);
     public List<ApartmentTransaction> findApartmentTransactionsForGraph(String gu, String dongName, String apartmentName, double areaForExclusiveUse, LocalDate startDate, LocalDate endDate);
+    void updatePredictCost(long transactionId, double predictCost, boolean isReliable);
 }
