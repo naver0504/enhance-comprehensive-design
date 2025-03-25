@@ -13,6 +13,10 @@ import com.example.query.dto.response.SearchResponseRecord;
 import com.example.query.dto.response.TransactionDetailResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
@@ -26,6 +30,7 @@ public class ApartmentTransactionAdapterImpl implements ApartmentTransactionAdap
 
     private final ApartmentTransactionMongoRepository apartmentTransactionMongoRepository;
     private final QuerydslSearchApartmentTransactionRepository querydslApartmentTransactionRepository;
+    private final MongoTemplate mongoTemplate;
 
     @Override
     public boolean isExistTransaction(Long transactionId) {
@@ -67,5 +72,12 @@ public class ApartmentTransactionAdapterImpl implements ApartmentTransactionAdap
     @Override
     public List<ApartmentTransaction> findApartmentTransactionsForGraph(String gu, String dongName, String apartmentName, double areaForExclusiveUse, LocalDate startDate, LocalDate endDate) {
         return apartmentTransactionMongoRepository.findApartmentTransactionsForGraph(gu, dongName, apartmentName, areaForExclusiveUse, startDate, endDate);
+    }
+
+    @Override
+    public void updatePredictCost(long transactionId, double predictCost, boolean isReliable) {
+        Query query = new Query(Criteria.where("transactionId").is(transactionId));
+        Update update = new Update().set("predictedCost", predictCost).set("isReliable", isReliable);
+        mongoTemplate.updateFirst(query, update, ApartmentTransaction.class);
     }
 }
