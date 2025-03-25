@@ -1,0 +1,26 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: query-service
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/query-service
+  jackson:
+    serialization:
+      indent-output: true
+kafka:
+  host: localhost
+  port: 29092
+  group-id: query-service-1
+
+predict:
+  ai:
+    base-url: model
+    port: 8080
+    predict-graph-path: /predict/graph
+logging:
+  level:
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+    org.springframework.data.mongodb.core.query: DEBUG
