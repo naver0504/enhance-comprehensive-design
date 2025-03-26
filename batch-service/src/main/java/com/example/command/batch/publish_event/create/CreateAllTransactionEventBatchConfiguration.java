@@ -1,8 +1,11 @@
 package com.example.command.batch.publish_event.create;
 
+import com.example.command.batch.publish_event.CustomKafkaItemWriter;
+import com.example.command.batch.publish_event.EventItemRecord;
 import com.example.command.batch.query_dsl.QuerydslNoOffsetIdPagingItemReader;
 import com.example.command.batch.query_dsl.expression.Expression;
 import com.example.command.batch.query_dsl.options.QuerydslNoOffsetNumberOptions;
+import com.example.command.kafka.config.KafkaProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.querydsl.core.types.Projections;
 import jakarta.persistence.EntityManagerFactory;
@@ -37,7 +40,7 @@ public class CreateAllTransactionEventBatchConfiguration {
     private final EntityManagerFactory emf;
     private final JobRepository jobRepository;
     private final PlatformTransactionManager platformTransactionManager;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaTemplate<Long, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
 
@@ -52,9 +55,8 @@ public class CreateAllTransactionEventBatchConfiguration {
     @Bean(name = STEP_NAME)
     public Step createAllTransactionEventStep() {
         return new StepBuilder(STEP_NAME, jobRepository)
-                .<CreateTransactionRecord, String>chunk(CHUNK_SIZE, platformTransactionManager)
+                .<CreateTransactionRecord, CreateTransactionRecord>chunk(CHUNK_SIZE, platformTransactionManager)
                 .reader(apartmentTransactionQuerydslNoOffsetIdPagingItemReader())
-                .processor(createTransactionEventItemProcessor())
                 .writer(createTransactionEventItemWriter())
                 .build();
 
@@ -81,17 +83,14 @@ public class CreateAllTransactionEventBatchConfiguration {
         );
     }
 
-    @Bean(name = STEP_NAME + "_Processor")
-    @StepScope
-    public ItemProcessor<CreateTransactionRecord, String> createTransactionEventItemProcessor() {
-        return objectMapper::writeValueAsString;
-    }
-
     @Bean(name = STEP_NAME + "_Writer")
     @StepScope
-    public KafkaItemWriter<String, String> createTransactionEventItemWriter() {
-        KafkaItemWriter<String, String> kafkaItemWriter = new KafkaItemWriter<>();
+    public CustomKafkaItemWriter<Long, EventItemRecord> createTransactionEventItemWriter() {
+        CustomKafkaItemWriter<Long, EventItemRecord> kafkaItemWriter = new CustomKafkaItemWriter<>();
         kafkaItemWriter.setKafkaTemplate(kafkaTemplate);
+        kafkaItemWriter.setObjectMapper(objectMapper);
+        kafkaItemWriter.setItemKeyMapper(EventItemRecord::getPartitionKey);
+        kafkaItemWriter.setTopic(KafkaProperties.CREATE_TRANSACTION_TOPIC);
         kafkaItemWriter.setTimeout(3000);
         return kafkaItemWriter;
     }
