@@ -1,4 +1,4 @@
 package com.example.query.kafka;
 
-public record UpdateTransactionRecord(long transactionId, long predictCost, boolean isReliable) {
+public record UpdateTransactionRecord(long id, long predictCost, boolean isReliable) {
 }
