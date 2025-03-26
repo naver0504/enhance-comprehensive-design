@@ -16,6 +16,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+
 @RequiredArgsConstructor
 @RestController
 @EnableScheduling
@@ -42,12 +46,6 @@ public class UpdateTransactionScheduler {
                 .toJobParameters();
 
         jobLauncher.run(allGuOpenApiJob, allGuOpenApiJobParameters);
-
-        Job createNewTransactionEventJob = beanFactory.getBean("create_new_transaction_event_job", Job.class);
-        JobParameters createNewTransactionEventJobParameters = new JobParametersBuilder(jobExplorer)
-                .getNextJobParameters(createNewTransactionEventJob)
-                .toJobParameters();
-        jobLauncher.run(createNewTransactionEventJob, createNewTransactionEventJobParameters);
     }
 
 
