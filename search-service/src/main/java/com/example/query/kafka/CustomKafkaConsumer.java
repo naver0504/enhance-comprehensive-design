@@ -22,7 +22,6 @@ public class CustomKafkaConsumer {
     public void consumeCreateTransactionEvent(@Payload String message) throws JsonProcessingException {
         CreateTransactionRecord createTransactionRecord = objectMapper.readValue(message, CreateTransactionRecord.class);
         if (apartmentTransactionAdapter.isExistTransaction(createTransactionRecord.id())) {
-            log.info("Transaction record already exists: {}", createTransactionRecord.id());
             return;
         }
         apartmentTransactionAdapter.save(createTransactionRecord.toEntity());
@@ -32,6 +31,6 @@ public class CustomKafkaConsumer {
     @KafkaListener(topics = CustomKafkaProperties.UPDATE_TRANSACTION_TOPIC, groupId = "query-service", containerFactory = "kafkaListenerContainerFactory")
     public void consumeUpdateTransactionEvent(@Payload String message) throws JsonProcessingException {
         UpdateTransactionRecord updateTransactionRecord = objectMapper.readValue(message, UpdateTransactionRecord.class);
-        apartmentTransactionAdapter.updatePredictCost(updateTransactionRecord.transactionId(), updateTransactionRecord.predictCost(), updateTransactionRecord.isReliable());
+        apartmentTransactionAdapter.updatePredictCost(updateTransactionRecord.id(), updateTransactionRecord.predictCost(), updateTransactionRecord.isReliable());
     }
 }
