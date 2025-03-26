@@ -6,17 +6,13 @@ import com.example.query.adapter.order.CustomPageImpl;
 import com.example.query.adapter.order.CustomPageable;
 import com.example.query.adapter.repository.ApartmentTransactionMongoRepository;
 import com.example.query.adapter.repository.QuerydslSearchApartmentTransactionRepository;
+import com.example.query.adapter.repository.TransactionMongoTemplate;
 import com.example.query.dto.request.SearchCondition;
 import com.example.query.dto.response.SearchApartNameResponse;
 import com.example.query.dto.response.SearchAreaResponse;
 import com.example.query.dto.response.SearchResponseRecord;
-import com.example.query.dto.response.TransactionDetailResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
@@ -24,13 +20,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+
 @Component
 @RequiredArgsConstructor
 public class ApartmentTransactionAdapterImpl implements ApartmentTransactionAdapter {
 
     private final ApartmentTransactionMongoRepository apartmentTransactionMongoRepository;
     private final QuerydslSearchApartmentTransactionRepository querydslApartmentTransactionRepository;
-    private final MongoTemplate mongoTemplate;
+    private final TransactionMongoTemplate transactionMongoTemplate;
 
     @Override
     public boolean isExistTransaction(Long transactionId) {
@@ -52,22 +49,19 @@ public class ApartmentTransactionAdapterImpl implements ApartmentTransactionAdap
         List<SearchResponseRecord> contents = querydslApartmentTransactionRepository.searchApartmentTransactions(searchCondition, customPageable)
                 .stream().map(SearchResponseRecord::new).toList();
 
-        if(ObjectUtils.isEmpty(cachedCount)) cachedCount = querydslApartmentTransactionRepository.getCount(searchCondition);
+        if (ObjectUtils.isEmpty(cachedCount)) cachedCount = querydslApartmentTransactionRepository.getCount(searchCondition);
         return new CustomPageImpl<>(contents, customPageable.toPageable(), cachedCount);
     }
 
     @Override
     public List<SearchApartNameResponse> findApartmentNames(String gu, String dongName) {
-        return apartmentTransactionMongoRepository.findApartmentNames(gu, dongName)
-                .stream().map(SearchApartNameResponse::new).toList();
+        return transactionMongoTemplate.findApartmentNames(gu, dongName).stream().map(SearchApartNameResponse::new).toList();
     }
 
     @Override
     public List<SearchAreaResponse> findAreaForExclusive(String gu, String dongName, String apartmentName) {
-        return apartmentTransactionMongoRepository.findAreaForExclusive(gu, dongName, apartmentName)
-                .stream().map(SearchAreaResponse::new).toList();
+        return transactionMongoTemplate.findAreaForExclusive(gu, dongName, apartmentName).stream().map(SearchAreaResponse::new).toList();
     }
-
 
     @Override
     public List<ApartmentTransaction> findApartmentTransactionsForGraph(String gu, String dongName, String apartmentName, double areaForExclusiveUse, LocalDate startDate, LocalDate endDate) {
@@ -76,8 +70,6 @@ public class ApartmentTransactionAdapterImpl implements ApartmentTransactionAdap
 
     @Override
     public void updatePredictCost(long transactionId, double predictCost, boolean isReliable) {
-        Query query = new Query(Criteria.where("transactionId").is(transactionId));
-        Update update = new Update().set("predictedCost", predictCost).set("isReliable", isReliable);
-        mongoTemplate.updateFirst(query, update, ApartmentTransaction.class);
+        transactionMongoTemplate.updatePredictCost(transactionId, predictCost, isReliable);
     }
 }
