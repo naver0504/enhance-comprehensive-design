@@ -38,10 +38,6 @@ public class SearchCondition {
         return !StringUtils.hasText(gu);
     }
 
-    public boolean isReliabilityEmpty() {
-        return reliability == Reliability.ALL;
-    }
-
     public BooleanExpression toReliabilityEq() {
         return reliability.getReliabilityExpression();
     }
