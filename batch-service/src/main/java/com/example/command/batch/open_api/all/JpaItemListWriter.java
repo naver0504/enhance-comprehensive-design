@@ -22,4 +22,9 @@ public class JpaItemListWriter<T> extends JpaItemWriter<List<T>> {
 
         jpaItemWriter.write(totalList);
     }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        return;
+    }
 }

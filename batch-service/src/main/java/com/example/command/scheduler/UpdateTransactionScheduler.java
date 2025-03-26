@@ -16,6 +16,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+
 @RequiredArgsConstructor
 @RestController
 @EnableScheduling
@@ -25,22 +29,23 @@ public class UpdateTransactionScheduler {
     private final JobLauncher jobLauncher;
     private final JobExplorer jobExplorer;
 
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMM");
+
     // 매달 1일 5시에
     @Scheduled(cron = "0 0 5 1 * *")
     public void createNewTransaction() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+
         Job allGuOpenApiJob = beanFactory.getBean("allGuOpenApiJob", Job.class);
 
+        LocalDate beforeDate = LocalDate.now().minusMonths(1);
+        YearMonth yearMonth = YearMonth.from(beforeDate);
+        String contractDate = yearMonth.format(formatter);
+
         JobParameters allGuOpenApiJobParameters = new JobParametersBuilder(jobExplorer)
-                .getNextJobParameters(allGuOpenApiJob)
+                .addJobParameter("contractDate", contractDate, String.class)
                 .toJobParameters();
 
         jobLauncher.run(allGuOpenApiJob, allGuOpenApiJobParameters);
-
-        Job createNewTransactionEventJob = beanFactory.getBean("create_new_transaction_event_job", Job.class);
-        JobParameters createNewTransactionEventJobParameters = new JobParametersBuilder(jobExplorer)
-                .getNextJobParameters(createNewTransactionEventJob)
-                .toJobParameters();
-        jobLauncher.run(createNewTransactionEventJob, createNewTransactionEventJobParameters);
     }
 
 

@@ -1,6 +1,7 @@
 package com.example.command.batch.publish_event.update;
 
 import com.example.command.batch.publish_event.CustomKafkaItemWriter;
+import com.example.command.batch.publish_event.EventItemRecord;
 import com.example.command.batch.query_dsl.QuerydslNoOffsetIdPagingItemReader;
 import com.example.command.batch.query_dsl.expression.Expression;
 import com.example.command.batch.query_dsl.options.QuerydslNoOffsetNumberOptions;
@@ -37,7 +38,7 @@ public class UpdateTransactionBatchConfiguration {
     private final EntityManagerFactory emf;
     private final JobRepository jobRepository;
     private final PlatformTransactionManager platformTransactionManager;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaTemplate<Long, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
 
@@ -52,9 +53,9 @@ public class UpdateTransactionBatchConfiguration {
     @Bean(name = STEP_NAME)
     public Step createAllTransactionEventStep() {
         return new StepBuilder(STEP_NAME, jobRepository)
-                .<UpdateTransactionRecord, String>chunk(CHUNK_SIZE, platformTransactionManager)
+                .<UpdateTransactionRecord, UpdateTransactionRecord>chunk(CHUNK_SIZE, platformTransactionManager)
                 .reader(apartmentTransactionQuerydslNoOffsetIdPagingItemReader())
-                .processor(createTransactionEventItemProcessor())
+//                .processor(createTransactionEventItemProcessor())
                 .writer(createTransactionEventItemWriter())
                 .build();
 
@@ -80,18 +81,15 @@ public class UpdateTransactionBatchConfiguration {
         );
     }
 
-    @Bean(name = STEP_NAME + "_Processor")
-    @StepScope
-    public ItemProcessor<UpdateTransactionRecord, String> createTransactionEventItemProcessor() {
-        return objectMapper::writeValueAsString;
-    }
 
     @Bean(name = STEP_NAME + "_Writer")
     @StepScope
-    public CustomKafkaItemWriter<String, String> createTransactionEventItemWriter() {
-        CustomKafkaItemWriter<String, String> kafkaItemWriter = new CustomKafkaItemWriter<>();
+    public CustomKafkaItemWriter<Long, EventItemRecord> createTransactionEventItemWriter() {
+        CustomKafkaItemWriter<Long, EventItemRecord> kafkaItemWriter = new CustomKafkaItemWriter<>();
         kafkaItemWriter.setKafkaTemplate(kafkaTemplate);
         kafkaItemWriter.setTimeout(3000);
+        kafkaItemWriter.setItemKeyMapper(EventItemRecord::getPartitionKey);
+        kafkaItemWriter.setObjectMapper(objectMapper);
         kafkaItemWriter.setTopic(KafkaProperties.UPDATE_TRANSACTION_TOPIC);
         return kafkaItemWriter;
     }
