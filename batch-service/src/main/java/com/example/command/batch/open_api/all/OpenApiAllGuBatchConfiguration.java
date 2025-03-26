@@ -9,6 +9,7 @@ import com.example.command.batch.kakao_map.jibun.KaKaoMapBatchConfigurationWithJ
 import com.example.command.batch.open_api.OpenApiBaseBatchConfiguration;
 import com.example.command.batch.open_api.dto.ApartmentDetailResponseWithGu;
 import com.example.command.batch.predict_cost.PredictCostBatchConfiguration;
+import com.example.command.batch.publish_event.create.CreateNewTransactionBatchConfiguration;
 import com.example.command.batch.query_dsl.QuerydslNoOffsetIdPagingItemReader;
 import com.example.command.batch.query_dsl.expression.Expression;
 import com.example.command.batch.query_dsl.options.QuerydslNoOffsetNumberOptions;
@@ -26,6 +27,7 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JpaItemWriter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -39,8 +41,7 @@ import static com.example.command.domain.interest.QInterest.interest;
 import static com.example.command.domain.predict_cost.QPredictCost.*;
 
 @Configuration
-@RequiredArgsConstructor
-@Import({OpenApiBaseBatchConfiguration.class, KaKaoMapBatchConfigurationWithJibun.class, PredictCostBatchConfiguration.class})
+@Import({OpenApiBaseBatchConfiguration.class, KaKaoMapBatchConfigurationWithJibun.class, PredictCostBatchConfiguration.class, CreateNewTransactionBatchConfiguration.class})
 public class OpenApiAllGuBatchConfiguration {
 
     private static final String JOB_NAME = "allGuOpenApiJob";
@@ -58,12 +59,34 @@ public class OpenApiAllGuBatchConfiguration {
     private final EntityManagerFactory entityManagerFactory;
     private final ItemProcessor<ApartmentBatchQuery, PredictCost> predictCostProcessor;
     private final JdbcBatchItemWriter<PredictCost> predictCostJdbcBatchItemWriter;
+    private final Step createNewTransactionEventStep;
+
+    public OpenApiAllGuBatchConfiguration(OpenApiClient openApiClient,
+                                          PlatformTransactionManager platformTransactionManager,
+                                          KaKaoApiClientWithJibun kaKaoApiClientWithJibun,
+                                          InterestRepository interestRepository,
+                                          DongRepository dongRepository,
+                                          EntityManagerFactory entityManagerFactory,
+                                          ItemProcessor<ApartmentBatchQuery, PredictCost> predictCostProcessor,
+                                          JdbcBatchItemWriter<PredictCost> predictCostJdbcBatchItemWriter,
+                                          @Qualifier(value = CreateNewTransactionBatchConfiguration.STEP_NAME) Step createNewTransactionEventStep) {
+        this.openApiClient = openApiClient;
+        this.platformTransactionManager = platformTransactionManager;
+        this.kaKaoApiClientWithJibun = kaKaoApiClientWithJibun;
+        this.interestRepository = interestRepository;
+        this.dongRepository = dongRepository;
+        this.entityManagerFactory = entityManagerFactory;
+        this.predictCostProcessor = predictCostProcessor;
+        this.predictCostJdbcBatchItemWriter = predictCostJdbcBatchItemWriter;
+        this.createNewTransactionEventStep = createNewTransactionEventStep;
+    }
 
     @Bean(name = JOB_NAME)
     public Job openApiAllGuJob(JobRepository jobRepository) {
         return new JobBuilder(JOB_NAME, jobRepository)
                 .start(openApiAllGuStep(jobRepository, platformTransactionManager))
                 .next(openApiAllGuPredictCostStep(jobRepository))
+                .start(createNewTransactionEventStep)
                 .build();
     }
 
