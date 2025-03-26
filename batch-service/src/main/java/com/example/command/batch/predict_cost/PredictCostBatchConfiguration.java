@@ -5,6 +5,7 @@ import com.example.command.api_client.ApiClient;
 import com.example.command.api_client.predict.PredictAiProperties;
 import com.example.command.api_client.predict.PredictApiClientForBatch;
 import com.example.command.api_client.predict.dto.ApartmentBatchQuery;
+import com.example.command.batch.publish_event.update.UpdateTransactionBatchConfiguration;
 import com.example.command.batch.query_dsl.QuerydslNoOffsetIdPagingItemReader;
 import com.example.command.batch.query_dsl.expression.Expression;
 import com.example.command.batch.query_dsl.options.QuerydslNoOffsetNumberOptions;
@@ -12,6 +13,7 @@ import com.example.command.domain.predict_cost.PredictCost;
 import com.querydsl.core.types.Projections;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.sql.Update;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -24,9 +26,11 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.support.CompositeItemWriter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.client.RestTemplate;
 
@@ -38,8 +42,8 @@ import static com.example.command.domain.interest.QInterest.interest;
 
 
 @Configuration
-@RequiredArgsConstructor
 @EnableConfigurationProperties(PredictAiProperties.class)
+@Import(UpdateTransactionBatchConfiguration.class)
 public class PredictCostBatchConfiguration {
 
     private static final int CHUNK_SIZE = 1000;
@@ -54,6 +58,24 @@ public class PredictCostBatchConfiguration {
     private final PredictAiProperties predictAiProperties;
     private final RestTemplate restTemplate;
     private final QuerydslPredictCostRepository querydslPredictCostRepository;
+    private final Step produceUpdateTransactionStep;
+
+    public PredictCostBatchConfiguration(EntityManagerFactory emf,
+                                         JobRepository jobRepository,
+                                         PlatformTransactionManager platformTransactionManager,
+                                         DataSource dataSource, PredictAiProperties predictAiProperties,
+                                         RestTemplate restTemplate,
+                                         QuerydslPredictCostRepository querydslPredictCostRepository,
+                                         @Qualifier(UpdateTransactionBatchConfiguration.STEP_NAME) Step produceUpdateTransactionStep) {
+        this.emf = emf;
+        this.jobRepository = jobRepository;
+        this.platformTransactionManager = platformTransactionManager;
+        this.dataSource = dataSource;
+        this.predictAiProperties = predictAiProperties;
+        this.restTemplate = restTemplate;
+        this.querydslPredictCostRepository = querydslPredictCostRepository;
+        this.produceUpdateTransactionStep = produceUpdateTransactionStep;
+    }
 
     @Bean
     public Job predictCostJob() {
@@ -61,6 +83,7 @@ public class PredictCostBatchConfiguration {
                 .incrementer(new RunIdIncrementer())
                 .flow(updatePredictCostToNotRecentStep())
                 .next(insertPredictCostStep())
+                .next(produceUpdateTransactionStep)
                 .end()
                 .build();
     }
