@@ -1,4 +1,11 @@
 package com.example.command.batch.publish_event.update;
 
-public record UpdateTransactionRecord(long transactionId, long predictCost, boolean isReliable) {
+import com.example.command.batch.publish_event.EventItemRecord;
+
+public record UpdateTransactionRecord(long transactionId, long predictCost, boolean isReliable) implements EventItemRecord {
+
+    @Override
+    public Long getPartitionKey() {
+        return transactionId;
+    }
 }
