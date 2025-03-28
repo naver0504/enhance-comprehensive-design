@@ -37,8 +37,7 @@ public class CreateNewTransactionBatchConfiguration {
     private final EntityManagerFactory emf;
     private final JobRepository jobRepository;
     private final PlatformTransactionManager platformTransactionManager;
-    private final KafkaTemplate<Long, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<Long, EventItemRecord> kafkaTemplate;
 
     @Bean(name = STEP_NAME)
     public Step createAllTransactionEventStep() {
@@ -82,7 +81,6 @@ public class CreateNewTransactionBatchConfiguration {
         kafkaItemWriter.setItemKeyMapper(EventItemRecord::getPartitionKey);
         kafkaItemWriter.setKafkaTemplate(kafkaTemplate);
         kafkaItemWriter.setTimeout(3000);
-        kafkaItemWriter.setObjectMapper(objectMapper);
         kafkaItemWriter.setTopic(KafkaProperties.CREATE_TRANSACTION_TOPIC);
         return kafkaItemWriter;
     }

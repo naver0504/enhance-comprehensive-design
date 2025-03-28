@@ -20,11 +20,10 @@ import org.springframework.util.Assert;
 @Slf4j
 @Setter
 public class CustomKafkaItemWriter<K, T> extends KeyValueItemWriter<K, T> {
-    protected KafkaTemplate<K, String> kafkaTemplate;
-    protected final List<CompletableFuture<SendResult<K, String>>> completableFutures = new ArrayList();
+    protected KafkaTemplate<K, T> kafkaTemplate;
+    protected final List<CompletableFuture<SendResult<K, T>>> completableFutures = new ArrayList();
     private long timeout = -1L;
     private String topic;
-    private ObjectMapper objectMapper;
 
     public CustomKafkaItemWriter() {
     }
@@ -35,7 +34,7 @@ public class CustomKafkaItemWriter<K, T> extends KeyValueItemWriter<K, T> {
         if (this.delete) {
             this.completableFutures.add(this.kafkaTemplate.send(this.topic ,key, null));
         } else {
-            this.completableFutures.add(this.kafkaTemplate.send(this.topic, key, objectMapper.writeValueAsString(value)));
+            this.completableFutures.add(this.kafkaTemplate.send(this.topic, key, value));
         }
     }
 

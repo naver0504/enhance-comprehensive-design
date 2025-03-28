@@ -17,8 +17,6 @@ import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.kafka.KafkaItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -40,8 +38,7 @@ public class CreateAllTransactionEventBatchConfiguration {
     private final EntityManagerFactory emf;
     private final JobRepository jobRepository;
     private final PlatformTransactionManager platformTransactionManager;
-    private final KafkaTemplate<Long, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<Long, EventItemRecord> kafkaTemplate;
 
 
     @Bean(name = JOB_NAME)
@@ -88,7 +85,6 @@ public class CreateAllTransactionEventBatchConfiguration {
     public CustomKafkaItemWriter<Long, EventItemRecord> createTransactionEventItemWriter() {
         CustomKafkaItemWriter<Long, EventItemRecord> kafkaItemWriter = new CustomKafkaItemWriter<>();
         kafkaItemWriter.setKafkaTemplate(kafkaTemplate);
-        kafkaItemWriter.setObjectMapper(objectMapper);
         kafkaItemWriter.setItemKeyMapper(EventItemRecord::getPartitionKey);
         kafkaItemWriter.setTopic(KafkaProperties.CREATE_TRANSACTION_TOPIC);
         kafkaItemWriter.setTimeout(3000);

@@ -1,4 +1,4 @@
-package com.example.query.kafka;
+package com.example.query.kafka.record;
 
 import com.example.query.adapter.document.ApartmentTransaction;
 
@@ -7,7 +7,7 @@ import java.time.LocalDate;
 public record CreateTransactionRecord(long id, String apartmentName, int buildYear, int dealAmount,
                                       double areaForExclusiveUse, String jibun, int floor, LocalDate dealDate, String dealingGbn,
                                       Double latitude, Double longitude, String gu, String dong, long predictedCost, boolean isReliable
-                                      ) {
+                                      ) implements EventRecord {
 
     public ApartmentTransaction toEntity() {
         return ApartmentTransaction.builder()
@@ -27,5 +27,10 @@ public record CreateTransactionRecord(long id, String apartmentName, int buildYe
                 .predictedCost(predictedCost)
                 .isReliable(isReliable)
                 .build();
+    }
+
+    @Override
+    public Long getPartitionKey() {
+        return id;
     }
 }

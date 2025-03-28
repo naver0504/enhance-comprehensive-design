@@ -1,6 +1,9 @@
 package com.example.query.kafka;
 
 import com.example.query.adapter.ApartmentTransactionAdapter;
+import com.example.query.kafka.record.CreateTransactionRecord;
+import com.example.query.kafka.record.EventRecord;
+import com.example.query.kafka.record.UpdateTransactionRecord;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +23,7 @@ public class CustomKafkaConsumer {
 
     @KafkaListener(topics = CustomKafkaProperties.CREATE_TRANSACTION_TOPIC, groupId = "query-service", containerFactory = "kafkaListenerContainerFactory")
     public void consumeCreateTransactionEvent(@Payload String message) throws JsonProcessingException {
-        CreateTransactionRecord createTransactionRecord = objectMapper.readValue(message, CreateTransactionRecord.class);
+        CreateTransactionRecord createTransactionRecord = convertToEventRecord(message, CreateTransactionRecord.class);
         if (apartmentTransactionAdapter.isExistTransaction(createTransactionRecord.id())) {
             return;
         }
@@ -30,7 +33,12 @@ public class CustomKafkaConsumer {
 
     @KafkaListener(topics = CustomKafkaProperties.UPDATE_TRANSACTION_TOPIC, groupId = "query-service", containerFactory = "kafkaListenerContainerFactory")
     public void consumeUpdateTransactionEvent(@Payload String message) throws JsonProcessingException {
-        UpdateTransactionRecord updateTransactionRecord = objectMapper.readValue(message, UpdateTransactionRecord.class);
+        log.info("consumeUpdateTransactionEvent message: {}", message);
+        UpdateTransactionRecord updateTransactionRecord = convertToEventRecord(message, UpdateTransactionRecord.class);
         apartmentTransactionAdapter.updatePredictCost(updateTransactionRecord.id(), updateTransactionRecord.predictCost(), updateTransactionRecord.isReliable());
+    }
+
+    public <T extends EventRecord> T convertToEventRecord(String message, Class<T> clazz) throws JsonProcessingException {
+        return objectMapper.readValue(message, clazz);
     }
 }
