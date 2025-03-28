@@ -7,7 +7,6 @@ import com.example.command.batch.query_dsl.expression.Expression;
 import com.example.command.batch.query_dsl.options.QuerydslNoOffsetNumberOptions;
 import com.example.command.domain.predict_cost.PredictStatus;
 import com.example.command.kafka.config.KafkaProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.querydsl.core.types.Projections;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
@@ -32,14 +31,13 @@ import static com.example.command.domain.predict_cost.QPredictCost.predictCost;
 public class UpdateTransactionBatchConfiguration {
 
     private static final int CHUNK_SIZE = 1000;
-    private static final String JOB_NAME = "update_transaction_event_job";
+    public static final String JOB_NAME = "update_transaction_event_job";
     public static final String STEP_NAME = JOB_NAME + "_step";
 
     private final EntityManagerFactory emf;
     private final JobRepository jobRepository;
     private final PlatformTransactionManager platformTransactionManager;
-    private final KafkaTemplate<Long, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<Long, EventItemRecord> kafkaTemplate;
 
     @Bean(name = JOB_NAME)
     public Job createAllTransactionEventJob() {
@@ -79,6 +77,7 @@ public class UpdateTransactionBatchConfiguration {
                         apartmentTransaction.id.eq(predictCost.apartmentTransaction.id),
                         predictCost.predictStatus.eq(PredictStatus.RECENT)
                  )
+                .where(apartmentTransaction.id.goe(1400844L))
         );
     }
 
@@ -89,7 +88,6 @@ public class UpdateTransactionBatchConfiguration {
         kafkaItemWriter.setKafkaTemplate(kafkaTemplate);
         kafkaItemWriter.setTimeout(3000);
         kafkaItemWriter.setItemKeyMapper(EventItemRecord::getPartitionKey);
-        kafkaItemWriter.setObjectMapper(objectMapper);
         kafkaItemWriter.setTopic(KafkaProperties.UPDATE_TRANSACTION_TOPIC);
         return kafkaItemWriter;
     }
