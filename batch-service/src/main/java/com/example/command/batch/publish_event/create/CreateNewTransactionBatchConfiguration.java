@@ -6,7 +6,6 @@ import com.example.command.batch.query_dsl.QuerydslNoOffsetIdPagingItemReader;
 import com.example.command.batch.query_dsl.expression.Expression;
 import com.example.command.batch.query_dsl.options.QuerydslNoOffsetNumberOptions;
 import com.example.command.kafka.config.KafkaProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.querydsl.core.types.Projections;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.time.LocalDate;
 
 import static com.example.command.domain.apartment.QApartmentTransaction.apartmentTransaction;
 import static com.example.command.domain.dong.QDongEntity.dongEntity;
@@ -52,11 +50,8 @@ public class CreateNewTransactionBatchConfiguration {
     @Bean(name = STEP_NAME + "_QuerydslReader")
     @StepScope
     public QuerydslNoOffsetIdPagingItemReader<CreateTransactionRecord, Long>
-    apartmentTransactionQuerydslNoOffsetIdPagingItemReader(@Value("#{jobParameters[contractDate]}") String contractDate) {
-        String year = contractDate.substring(0, 4);
-        String month = contractDate.substring(4, 6);
+    apartmentTransactionQuerydslNoOffsetIdPagingItemReader(@Value("#{jobParameters[lastId]}") Long lastId) {
 
-        LocalDate startDealDate = LocalDate.of(Integer.parseInt(year), Integer.parseInt(month), 1);
         QuerydslNoOffsetNumberOptions<CreateTransactionRecord, Long> options = new QuerydslNoOffsetNumberOptions<>(apartmentTransaction.id, Expression.ASC);
 
         return new QuerydslNoOffsetIdPagingItemReader<>(emf, CHUNK_SIZE, options, query -> query
@@ -70,7 +65,7 @@ public class CreateNewTransactionBatchConfiguration {
                 .from(apartmentTransaction)
                 .leftJoin(dongEntity).on(apartmentTransaction.dongEntity.id.eq(dongEntity.id))
                 .leftJoin(predictCost).on(apartmentTransaction.id.eq(predictCost.apartmentTransaction.id))
-                .where(apartmentTransaction.dealDate.goe(startDealDate))
+                .where(apartmentTransaction.id.gt(lastId))
         );
     }
 
