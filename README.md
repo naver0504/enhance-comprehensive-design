@@ -37,7 +37,7 @@
     **신규 아파트 실거래 매매 데이터**를 **자동으로 수집 및 저장**하는 배치 작업을 구현했습니다.
     - 매달 1일 오전 5시에 스케줄링되어 **국토교통부 API를 통해 실거래 데이터를 수집**하고, 수집한 데이터에 **좌표 데이터와 금리 설정을 추가**하여 모델에 예측값을 갱신 및 저장하는 작업을 수행합니다. 이후, **Kafka를 통해 수집된 데이터를 전달**하고, **Query-Service에서 Event를 수신하여 해당 트랜잭션을 저장**하는 구조로 설계하였습니다.
 
-    - 이 과정에서 **Event를 Produce하는 Batch 작업**을 구현할 때, **KafkaItemWriter**를 고려했으나, 해당 Writer에서는 **토픽(Topic)을 설정하는 부분이 없는 문제**를 확인했습니다. 이를 해결하기 위해, **KeyValueItemWriter를 상속하여 CustomKafkaItemWriter를 구현**하고, **토픽을 별도로 설정할 수 있는 Writer**를 만들어 문제를 해결했습니다.
+    - 이 과정에서 **Event를 Produce하는 Batch 작업**을 구현할 때, `KafkaItemWriter`를 고려했으나, 해당 **Writer**에서는 **토픽(Topic)을 설정하는 부분이 없는 문제**를 확인했습니다. 이를 해결하기 위해, `KeyValueItemWriter`를 상속하여 `CustomKafkaItemWriter`를 구현하고, **토픽을 별도로 설정할 수 있는 Writer**를 만들어 문제를 해결했습니다.
 ### 🧐 느낀 점
 
 ---
