@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.*;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.time.LocalDate;
+
 @RequiredArgsConstructor
 @Slf4j
 public class OpenApiAllGuBatchReader implements ItemStreamReader<ApartmentDetailResponseWithGu> {
@@ -22,7 +24,7 @@ public class OpenApiAllGuBatchReader implements ItemStreamReader<ApartmentDetail
     private int pageNo = 1;
 
     @Value("#{jobParameters[contractDate]}")
-    private String contractDate;
+    private LocalDate contractDate;
 
     private final ApiClient<OpenApiRequest, ApartmentDetailResponse> openApiClient;
     private final int NUM_OF_ROWS;
