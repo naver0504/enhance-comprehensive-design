@@ -2,6 +2,7 @@ package com.example.command.batch.open_api.all;
 
 import com.example.command.adapter.repository.interest.InterestRepository;
 import com.example.command.batch.open_api.DataHolder;
+import com.example.command.batch.open_api.PostConstructInitiationBean;
 import com.example.command.domain.interest.Interest;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -10,13 +11,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RequiredArgsConstructor
-public class InterestDataHolder implements DataHolder<LocalDate> {
+public class InterestDataHolder implements DataHolder<LocalDate>, PostConstructInitiationBean {
 
     private List<Interest> interests;
     private final InterestRepository interestRepository;
 
-    @PostConstruct
     @Override
+    @PostConstruct
     public void init() {
         interests = interestRepository.findAll();
     }

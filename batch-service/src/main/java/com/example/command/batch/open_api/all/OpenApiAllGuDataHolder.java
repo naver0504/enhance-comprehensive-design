@@ -1,5 +1,6 @@
 package com.example.command.batch.open_api.all;
 
+import com.example.command.batch.open_api.PostConstructInitiationBean;
 import com.example.command.domain.dong.DongEntity;
 import com.example.command.domain.dong.Gu;
 import com.example.command.adapter.repository.dong.DongRepository;
@@ -12,7 +13,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
-public class OpenApiAllGuDataHolder implements DataHolder<GuDong> {
+public class OpenApiAllGuDataHolder implements DataHolder<GuDong>, PostConstructInitiationBean {
 
     private Map<Gu, Map<String, Integer>> guDongMap;
     private final DongRepository dongRepository;
