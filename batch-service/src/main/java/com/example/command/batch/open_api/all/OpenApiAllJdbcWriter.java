@@ -1,8 +1,9 @@
-package com.example.command.batch.open_api.simple;
+package com.example.command.batch.open_api.all;
 
 
 import com.example.command.batch.open_api.dto.ApartmentDetail;
-import com.example.command.batch.open_api.dto.ApartmentDetailResponse;
+import com.example.command.batch.open_api.dto.ApartmentDetailResponseWithGu;
+import com.example.command.domain.dong.Gu;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.*;
@@ -16,10 +17,13 @@ import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
-public class OpenApiJdbcWriter implements ItemWriter<ApartmentDetailResponse> {
+public class OpenApiAllJdbcWriter implements ItemWriter<ApartmentDetailResponseWithGu> {
 
-    private final OpenApiDongDataHolder openApiDongDataHolder;
+    private final InterestDataHolder interestDataHolder;
+    private final OpenApiAllGuDataHolder openApiAllGuDataHolder;
+    private final ExistTransactionChecker existTransactionChecker;
     private final JdbcTemplate jdbcTemplate;
+
     private final String INSERT_SQL =
             "INSERT INTO apartment_transaction (" +
                     "apartment_name, " +
@@ -33,21 +37,22 @@ public class OpenApiJdbcWriter implements ItemWriter<ApartmentDetailResponse> {
                     "floor, " +
                     "deal_date, " +
                     "dealing_gbn," +
-                    "dong_entity_id" +
+                    "dong_entity_id," +
+                    "interest_id" +
                     ") " +
                     "VALUES" +
-                    "( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-
-
+                    "( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
-    public void write(Chunk<? extends ApartmentDetailResponse> chunk)  {
-        ApartmentDetailResponse apartmentDetailResponse = chunk.getItems().get(0);
+    public void write(Chunk<? extends ApartmentDetailResponseWithGu> chunk) throws Exception {
+        ApartmentDetailResponseWithGu apartmentDetailResponse = chunk.getItems().get(0);
 
-        List<ApartmentDetail> items = apartmentDetailResponse.body().items()
+        Gu gu = apartmentDetailResponse.gu();
+
+        List<ApartmentDetail> items = apartmentDetailResponse.toApartmentDetails()
                 .stream()
-                .filter(apartmentDetail -> openApiDongDataHolder.getEntityId(apartmentDetail.dongName().trim()) != null)
+                .filter(apartmentDetail -> openApiAllGuDataHolder.getEntityId(gu, apartmentDetail.dongName().strip()) != null)
+                .takeWhile(apartmentDetail -> existTransactionChecker.isNotExistTransaction(gu, apartmentDetail))
                 .toList();
 
         jdbcTemplate.batchUpdate(INSERT_SQL, new BatchPreparedStatementSetter() {
@@ -66,7 +71,8 @@ public class OpenApiJdbcWriter implements ItemWriter<ApartmentDetailResponse> {
                     ps.setInt(9, apartmentDetail.floor());
                     ps.setDate(10, Date.valueOf(apartmentDetail.getDealDate()));
                     ps.setString(11, apartmentDetail.dealingGbn() == null ? null : apartmentDetail.dealingGbn().name());
-                    ps.setLong(12, openApiDongDataHolder.getEntityId(apartmentDetail.dongName()));
+                    ps.setLong(12, openApiAllGuDataHolder.getEntityId(gu, apartmentDetail.dongName()));
+                    ps.setLong(13, interestDataHolder.getEntityId(apartmentDetail.getDealDate()));
                 } catch (Exception e) {
                     log.error("apartmentDetail : {}", items.get(i));
                     throw e;
@@ -79,4 +85,6 @@ public class OpenApiJdbcWriter implements ItemWriter<ApartmentDetailResponse> {
             }
         });
     }
+
+
 }

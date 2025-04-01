@@ -1,5 +1,6 @@
 package com.example.command.scheduler;
 
+import com.example.command.adapter.repository.apart.ApartmentTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
@@ -28,21 +29,22 @@ public class UpdateTransactionScheduler {
     private final BeanFactory beanFactory;
     private final JobLauncher jobLauncher;
     private final JobExplorer jobExplorer;
+    private final ApartmentTransactionRepository apartmentTransactionRepository;
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMM");
 
     // 매달 1일 5시에
-    @Scheduled(cron = "0 0 5 1 * *")
+    @Scheduled(cron = "0 0 5 * * *")
     public void createNewTransaction() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
 
         Job allGuOpenApiJob = beanFactory.getBean("allGuOpenApiJob", Job.class);
 
-        LocalDate beforeDate = LocalDate.now().minusMonths(1);
-        YearMonth yearMonth = YearMonth.from(beforeDate);
-        String contractDate = yearMonth.format(formatter);
+        Long lastId = apartmentTransactionRepository.findLastId();
+        LocalDate contractDate = LocalDate.now().minusDays(1);
 
         JobParameters allGuOpenApiJobParameters = new JobParametersBuilder(jobExplorer)
-                .addJobParameter("contractDate", contractDate, String.class)
+                .addLong("lastId", lastId)
+                .addJobParameter("contractDate", contractDate, LocalDate.class)
                 .toJobParameters();
 
         jobLauncher.run(allGuOpenApiJob, allGuOpenApiJobParameters);

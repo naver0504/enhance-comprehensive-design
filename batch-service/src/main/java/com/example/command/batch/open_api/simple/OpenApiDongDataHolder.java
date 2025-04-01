@@ -1,6 +1,7 @@
 package com.example.command.batch.open_api.simple;
 
 
+import com.example.command.batch.open_api.PostConstructInitiationBean;
 import com.example.command.domain.dong.Gu;
 import com.example.command.adapter.repository.dong.QuerydslDongRepository;
 import com.example.command.batch.open_api.DataHolder;
@@ -11,7 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import java.util.Map;
 
 @RequiredArgsConstructor
-public class OpenApiDongDataHolder implements DataHolder<String> {
+public class OpenApiDongDataHolder implements DataHolder<String>, PostConstructInitiationBean {
 
     private final QuerydslDongRepository QuerydslDongRepository;
     private Map<String, Integer> dongMap;

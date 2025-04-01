@@ -1,5 +1,6 @@
 package com.example.command.batch.open_api.all;
 
+import com.example.command.adapter.repository.apart.QuerydslApartmentTransaction;
 import com.example.command.adapter.repository.dong.DongRepository;
 import com.example.command.adapter.repository.interest.InterestRepository;
 import com.example.command.api_client.kakao.KaKaoApiClientWithJibun;
@@ -28,11 +29,14 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static com.example.command.domain.apartment.QApartmentTransaction.apartmentTransaction;
@@ -60,6 +64,8 @@ public class OpenApiAllGuBatchConfiguration {
     private final ItemProcessor<ApartmentBatchQuery, PredictCost> predictCostProcessor;
     private final JdbcBatchItemWriter<PredictCost> predictCostJdbcBatchItemWriter;
     private final Step createNewTransactionEventStep;
+    private final QuerydslApartmentTransaction querydslApartmentTransaction;
+    private final JdbcTemplate jdbcTemplate;
 
     public OpenApiAllGuBatchConfiguration(OpenApiClient openApiClient,
                                           PlatformTransactionManager platformTransactionManager,
@@ -69,7 +75,8 @@ public class OpenApiAllGuBatchConfiguration {
                                           EntityManagerFactory entityManagerFactory,
                                           ItemProcessor<ApartmentBatchQuery, PredictCost> predictCostProcessor,
                                           JdbcBatchItemWriter<PredictCost> predictCostJdbcBatchItemWriter,
-                                          @Qualifier(value = CreateNewTransactionBatchConfiguration.STEP_NAME) Step createNewTransactionEventStep) {
+                                          @Qualifier(value = CreateNewTransactionBatchConfiguration.STEP_NAME) Step createNewTransactionEventStep,
+                                          QuerydslApartmentTransaction querydslApartmentTransaction, JdbcTemplate jdbcTemplate) {
         this.openApiClient = openApiClient;
         this.platformTransactionManager = platformTransactionManager;
         this.kaKaoApiClientWithJibun = kaKaoApiClientWithJibun;
@@ -79,6 +86,8 @@ public class OpenApiAllGuBatchConfiguration {
         this.predictCostProcessor = predictCostProcessor;
         this.predictCostJdbcBatchItemWriter = predictCostJdbcBatchItemWriter;
         this.createNewTransactionEventStep = createNewTransactionEventStep;
+        this.querydslApartmentTransaction = querydslApartmentTransaction;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Bean(name = JOB_NAME)
@@ -86,17 +95,16 @@ public class OpenApiAllGuBatchConfiguration {
         return new JobBuilder(JOB_NAME, jobRepository)
                 .start(openApiAllGuStep(jobRepository, platformTransactionManager))
                 .next(openApiAllGuPredictCostStep(jobRepository))
-                .start(createNewTransactionEventStep)
+                .next(createNewTransactionEventStep)
                 .build();
     }
 
     @Bean(name = STEP_NAME)
     public Step openApiAllGuStep(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager) {
         return new StepBuilder(STEP_NAME, jobRepository)
-                .<ApartmentDetailResponseWithGu, List<ApartmentTransaction>>chunk(CHUNK_SIZE, platformTransactionManager)
+                .<ApartmentDetailResponseWithGu, ApartmentDetailResponseWithGu>chunk(CHUNK_SIZE, platformTransactionManager)
                 .reader(openApiAllGuBatchReader())
-                .processor(apartmentTransactionProcessor())
-                .writer(jpaItemListWriter())
+                .writer(openApiAllJdbcWriter())
                 .build();
     }
 
@@ -104,7 +112,7 @@ public class OpenApiAllGuBatchConfiguration {
     public Step openApiAllGuPredictCostStep(JobRepository jobRepository) {
         return new StepBuilder(STEP_NAME + "_PredictCost", jobRepository)
                 .<ApartmentBatchQuery, PredictCost>chunk(SECOND_CHUNK_SIZE, platformTransactionManager)
-                .reader(apartmentTransactionQuerydslNoOffsetIdPagingItemReader())
+                .reader(apartmentTransactionQuerydslNoOffsetIdPagingItemReader(null))
                 .processor(predictCostProcessor)
                 .writer(predictCostJdbcBatchItemWriter)
                 .build();
@@ -112,8 +120,8 @@ public class OpenApiAllGuBatchConfiguration {
 
     @Bean
     @StepScope
-    public ApartmentTransactionProcessor apartmentTransactionProcessor() {
-        return new ApartmentTransactionProcessor(openApiAllGuDataHolder(), kaKaoApiClientWithJibun, interestDataHolder());
+    public ExistTransactionChecker existTransactionChecker() {
+        return new ExistTransactionChecker(querydslApartmentTransaction);
     }
 
     @Bean
@@ -133,19 +141,15 @@ public class OpenApiAllGuBatchConfiguration {
         return new OpenApiAllGuBatchReader(openApiClient, NUM_OF_ROWS);
     }
 
-
     @Bean
     @StepScope
-    public JpaItemListWriter<ApartmentTransaction> jpaItemListWriter() {
-        JpaItemWriter<ApartmentTransaction> jpaItemWriter = new JpaItemWriter<>();
-        jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
-
-        return new JpaItemListWriter<>(jpaItemWriter);
+    public OpenApiAllJdbcWriter openApiAllJdbcWriter() {
+        return new OpenApiAllJdbcWriter(interestDataHolder(), openApiAllGuDataHolder(), existTransactionChecker(), jdbcTemplate);
     }
 
     @Bean(name = STEP_NAME + "_QuerydslReader")
     @StepScope
-    public QuerydslNoOffsetIdPagingItemReader<ApartmentBatchQuery, Long> apartmentTransactionQuerydslNoOffsetIdPagingItemReader() {
+    public QuerydslNoOffsetIdPagingItemReader<ApartmentBatchQuery, Long> apartmentTransactionQuerydslNoOffsetIdPagingItemReader(@Value("#{jobParameters[lastId]}") Long lastId) {
 
         QuerydslNoOffsetNumberOptions<ApartmentBatchQuery, Long> options = new QuerydslNoOffsetNumberOptions<>(apartmentTransaction.id, Expression.ASC);
 
@@ -165,8 +169,7 @@ public class OpenApiAllGuBatchConfiguration {
                 .from(apartmentTransaction)
                 .innerJoin(interest).on(apartmentTransaction.interest.id.eq(interest.id))
                 .innerJoin(dongEntity).on(apartmentTransaction.dongEntity.id.eq(dongEntity.id))
-                .leftJoin(predictCost).on(apartmentTransaction.id.eq(predictCost.apartmentTransaction.id))
-                .where(predictCost.apartmentTransaction.id.isNull())
+                .where(apartmentTransaction.id.gt(lastId))
         );
     }
 }
