@@ -52,7 +52,7 @@ public class OpenApiAllJdbcWriter implements ItemWriter<ApartmentDetailResponseW
         List<ApartmentDetail> items = apartmentDetailResponse.toApartmentDetails()
                 .stream()
                 .filter(apartmentDetail -> openApiAllGuDataHolder.getEntityId(gu, apartmentDetail.dongName().strip()) != null)
-                .filter(apartmentDetail -> existTransactionChecker.isNotExistTransaction(gu, apartmentDetail))
+                .takeWhile(apartmentDetail -> existTransactionChecker.isNotExistTransaction(gu, apartmentDetail))
                 .toList();
 
         jdbcTemplate.batchUpdate(INSERT_SQL, new BatchPreparedStatementSetter() {
