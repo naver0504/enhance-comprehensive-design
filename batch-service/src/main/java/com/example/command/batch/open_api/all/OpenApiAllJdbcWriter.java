@@ -51,8 +51,8 @@ public class OpenApiAllJdbcWriter implements ItemWriter<ApartmentDetailResponseW
 
         List<ApartmentDetail> items = apartmentDetailResponse.toApartmentDetails()
                 .stream()
-                .filter(apartmentDetail -> openApiAllGuDataHolder.getEntityId(gu ,apartmentDetail.dongName().trim()) != null)
-                .takeWhile(apartmentDetail -> !existTransactionChecker.isExistTransaction(gu, apartmentDetail))
+                .filter(apartmentDetail -> openApiAllGuDataHolder.getEntityId(gu, apartmentDetail.dongName().strip()) != null)
+                .filter(apartmentDetail -> existTransactionChecker.isNotExistTransaction(gu, apartmentDetail))
                 .toList();
 
         jdbcTemplate.batchUpdate(INSERT_SQL, new BatchPreparedStatementSetter() {
@@ -60,18 +60,18 @@ public class OpenApiAllJdbcWriter implements ItemWriter<ApartmentDetailResponseW
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 try {
                     ApartmentDetail apartmentDetail = items.get(i);
-                    ps.setString(1, apartmentDetail.apartmentName() == null ? null : apartmentDetail.apartmentName().trim());
+                    ps.setString(1, apartmentDetail.apartmentName() == null ? null : apartmentDetail.apartmentName());
                     ps.setInt(2, apartmentDetail.buildYear());
-                    ps.setInt(3, apartmentDetail.getDealAmount());
+                    ps.setInt(3, apartmentDetail.dealAmount());
                     ps.setInt(4, apartmentDetail.dealYear());
                     ps.setInt(5, apartmentDetail.dealMonth());
                     ps.setInt(6, apartmentDetail.dealDay());
                     ps.setDouble(7, apartmentDetail.areaForExclusiveUse());
-                    ps.setString(8, apartmentDetail.jibun().trim());
+                    ps.setString(8, apartmentDetail.jibun());
                     ps.setInt(9, apartmentDetail.floor());
                     ps.setDate(10, Date.valueOf(apartmentDetail.getDealDate()));
                     ps.setString(11, apartmentDetail.dealingGbn() == null ? null : apartmentDetail.dealingGbn().name());
-                    ps.setLong(12, openApiAllGuDataHolder.getEntityId(gu, apartmentDetail.dongName().trim()));
+                    ps.setLong(12, openApiAllGuDataHolder.getEntityId(gu, apartmentDetail.dongName()));
                     ps.setLong(13, interestDataHolder.getEntityId(apartmentDetail.getDealDate()));
                 } catch (Exception e) {
                     log.error("apartmentDetail : {}", items.get(i));
@@ -85,4 +85,6 @@ public class OpenApiAllJdbcWriter implements ItemWriter<ApartmentDetailResponseW
             }
         });
     }
+
+
 }
