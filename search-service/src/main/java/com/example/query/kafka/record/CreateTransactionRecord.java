@@ -1,8 +1,13 @@
 package com.example.query.kafka.record;
 
 import com.example.query.adapter.document.ApartmentTransaction;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.data.util.Pair;
 
 import java.time.LocalDate;
+
+import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 public record CreateTransactionRecord(long id, String apartmentName, int buildYear, int dealAmount,
                                       double areaForExclusiveUse, String jibun, int floor, LocalDate dealDate, String dealingGbn,
