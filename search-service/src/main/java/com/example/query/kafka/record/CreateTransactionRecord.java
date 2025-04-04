@@ -1,8 +1,13 @@
 package com.example.query.kafka.record;
 
 import com.example.query.adapter.document.ApartmentTransaction;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.data.util.Pair;
 
 import java.time.LocalDate;
+
+import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 public record CreateTransactionRecord(long id, String apartmentName, int buildYear, int dealAmount,
                                       double areaForExclusiveUse, String jibun, int floor, LocalDate dealDate, String dealingGbn,
@@ -32,5 +37,29 @@ public record CreateTransactionRecord(long id, String apartmentName, int buildYe
     @Override
     public Long getPartitionKey() {
         return id;
+    }
+
+    @Override
+    public Pair<Query, Update> toQueryUpdate() {
+        Query query = new Query();
+        query.addCriteria(where("transactionId").is(id));
+
+        Update update = new Update();
+        update.set("apartmentName", apartmentName);
+        update.set("buildYear", buildYear);
+        update.set("dealAmount", dealAmount);
+        update.set("areaForExclusiveUse", areaForExclusiveUse);
+        update.set("jibun", jibun);
+        update.set("floor", floor);
+        update.set("dealDate", dealDate);
+        update.set("dealingGbn", dealingGbn);
+        update.set("latitude", latitude);
+        update.set("longitude", longitude);
+        update.set("gu", gu);
+        update.set("dong", dong);
+        update.set("predictedCost", predictedCost);
+        update.set("isReliable", isReliable);
+
+        return Pair.of(query, update);
     }
 }

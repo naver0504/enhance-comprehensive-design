@@ -87,7 +87,7 @@ public class CreateAllTransactionEventBatchConfiguration {
         kafkaItemWriter.setKafkaTemplate(kafkaTemplate);
         kafkaItemWriter.setItemKeyMapper(EventItemRecord::getPartitionKey);
         kafkaItemWriter.setTopic(KafkaProperties.CREATE_TRANSACTION_TOPIC);
-        kafkaItemWriter.setTimeout(3000);
+        kafkaItemWriter.setTimeout(1500);
         return kafkaItemWriter;
     }
 }
